@@ -1,15 +1,11 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const routes = require("./routes");
-const cors = require("cors");
+import express from "express";
+import cors from "cors";
+import productRoutes from "./routes/products.route.js";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-app.use(bodyParser.json());
+app.use(express.json());
 app.use(cors());
-app.use("/api", routes);
+app.use(productRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Servidor escuchando en el puerto ${PORT}`);
-});
+export default app

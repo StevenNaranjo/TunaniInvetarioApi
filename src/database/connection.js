@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+import Pool  from 'pg';
 require('dotenv').config(); // Carga las variables del archivo .env
 
 const pool = new Pool({
