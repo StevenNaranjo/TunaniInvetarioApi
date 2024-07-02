@@ -1,20 +1,13 @@
-// src/app.js
-const express = require('express');
-const pool = require('./db');
+const express = require("express");
+const bodyParser = require("body-parser");
+const routes = require("./routes");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 
-app.get('/inventory', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM productos');
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error obteniendo los productos:', error);
-        res.status(500).json({ error: 'Error del servidor' });
-    }
-});
+app.use(bodyParser.json());
+app.use("/api", routes);
 
-app.listen(port, () => {
-    console.log(`Servidor corriendo en http://localhost:${port}`);
+app.listen(PORT, () => {
+    console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
