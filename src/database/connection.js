@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config()// Carga las variables del archivo .env
 
 //conectarse a la db de postgreSQL
+// Un comentario de prueba
 
 const pool = new Pool.Pool({
     connectionString: process.env.DATABASE_URL,
