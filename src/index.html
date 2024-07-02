@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventario del Restaurante</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 30px;
+            min-height: 70px;
+            border-bottom: #77d300 3px solid;
+        }
+        header a, header h1 {
+            color: #fff;
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 16px;
+        }
+        #login-form, #inventory-section {
+            background: #fff;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        #inventory-section {
+            display: none;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            display: inline-block;
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Inventario del Restaurante</h1>
+        </div>
+    </header>
+    <div class="container">
+        <!-- Formulario de inicio de sesión -->
+        <div id="login-form">
+            <h2>Inicio de Sesión</h2>
+            <form id="login">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" name="username" required>
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" name="password" required>
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+        </div>
+
+        <!-- Sección de inventario -->
+        <div id="inventory-section">
+            <h2>Inventario</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nombre del Producto</th>
+                        <th>Cantidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-table">
+                    <!-- Aquí se insertarán las filas de productos desde el backend -->
+                </tbody>
+            </table>
+            <button onclick="showAddProductForm()">Añadir Producto</button>
+
+            <!-- Formulario para añadir producto -->
+            <div id="add-product-form" style="display:none;">
+                <h3>Añadir Producto</h3>
+                <label for="new-product-name">Nombre:</label>
+                <input type="text" id="new-product-name" required>
+                <label for="new-product-quantity">Cantidad:</label>
+                <input type="number" id="new-product-quantity" required>
+                <button onclick="addProduct()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.getElementById('login').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    fetch('http://localhost:1434/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ usuario: username, contraseña: password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data === 'Usuario o contraseña incorrectos') {
+            alert(data);
+        } else {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('inventory-section').style.display = 'block';
+            loadInventory();
+        }
+    });
+});
+
+function loadInventory() {
+    fetch('http://localhost:1434/inventario')
+    .then(response => response.json())
+    .then(data => {
+        const table = document.getElementById('inventory-table');
+        table.innerHTML = ''; // Limpia la tabla
+        data.forEach(producto => {
+            const row = table.insertRow();
+            const cell1 = row.insertCell(0);
+            const cell2 = row.insertCell(1);
+            const cell3 = row.insertCell(2);
+            cell1.innerHTML = producto.nombre;
+            cell2.innerHTML = producto.cantidad;
+            cell3.innerHTML = `
+                <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', ${producto.cantidad})">Actualizar</button>
+                <button onclick="deleteProduct(${producto.id})">Eliminar</button>
+            `;
+        });
+    });
+}
+
+function showAddProductForm() {
+    document.getElementById('add-product-form').style.display = 'block';
+}
+
+function addProduct() {
+    const nombre = document.getElementById('new-product-name').value;
+    const cantidad = document.getElementById('new-product-quantity').value;
+
+    fetch('http://localhost:1434/addProduct', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ nombre, cantidad: parseInt(cantidad) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Producto añadido');
+        loadInventory();
+        document.getElementById('add-product-form').style.display = 'none';
+    });
+}
+
+function showUpdateProductForm(id, nombre, cantidad) {
+    const newNombre = prompt('Nuevo nombre:', nombre);
+    const newCantidad = prompt('Nueva cantidad:', cantidad);
+
+    if (newNombre !== null && newCantidad !== null) {
+        updateProduct(id, newNombre, newCantidad);
+    }
+}
+
+function updateProduct(id, nombre, cantidad) {
+    fetch(`http://localhost:1434/updateProduct`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id, nombre, cantidad: parseInt(cantidad) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert('Producto actualizado');
+        loadInventory();
+    });
+}
+
+function deleteProduct(id) {
+    if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+        fetch(`http://localhost:1434/deleteProduct/${id}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert('Producto eliminado');
+            loadInventory();
+        });
+    }
+}
+
+    </script>
+</body>
+</html>
