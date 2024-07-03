@@ -89,20 +89,56 @@
         <!-- Sección de inventario -->
         <div id="inventory-section">
             <h2>Inventario</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nombre del Producto</th>
-                        <th>Cantidad</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="inventory-table">
-                    <!-- Aquí se insertarán las filas de productos desde el backend -->
-                </tbody>
-            </table>
+            <div id="insumos-section">
+                <h3>Insumos</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre del Producto</th>
+                            <th>Cantidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="insumos-table">
+                        <!-- Aquí se insertarán las filas de insumos desde el backend -->
+                    </tbody>
+                </table>
+            </div>
+        
+            <div id="verduras-frutas-section">
+                <h3>Verduras/Frutas</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre del Producto</th>
+                            <th>Cantidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="verduras-frutas-table">
+                        <!-- Aquí se insertarán las filas de verduras/frutas desde el backend -->
+                    </tbody>
+                </table>
+            </div>
+        
+            <div id="higiene-section">
+                <h3>Higiene</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nombre del Producto</th>
+                            <th>Cantidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="higiene-table">
+                        <!-- Aquí se insertarán las filas de higiene desde el backend -->
+                    </tbody>
+                </table>
+            </div>
+        
             <button onclick="showAddProductForm()">Añadir Producto</button>
-
+        
             <!-- Formulario para añadir producto -->
             <div id="add-product-form" style="display:none;">
                 <h3>Añadir Producto</h3>
@@ -110,6 +146,12 @@
                 <input type="text" id="new-product-name" required>
                 <label for="new-product-quantity">Cantidad:</label>
                 <input type="number" id="new-product-quantity" required>
+                <label for="new-product-type">Tipo:</label>
+                <select id="new-product-type" required>
+                    <option value="1">Insumos</option>
+                    <option value="2">Verduras/Frutas</option>
+                    <option value="3">Higiene</option>
+                </select>
                 <button onclick="addProduct()">Guardar</button>
             </div>
         </div>
@@ -145,23 +187,40 @@ function loadInventory() {
     fetch('http://localhost:1434/inventario')
     .then(response => response.json())
     .then(data => {
-        const table = document.getElementById('inventory-table');
-        table.innerHTML = ''; // Limpia la tabla
+        const insumosTable = document.getElementById('insumos-table');
+        const verdurasFrutasTable = document.getElementById('verduras-frutas-table');
+        const higieneTable = document.getElementById('higiene-table');
+
+        insumosTable.innerHTML = ''; // Limpia la tabla
+        verdurasFrutasTable.innerHTML = ''; // Limpia la tabla
+        higieneTable.innerHTML = ''; // Limpia la tabla
+
         data.forEach(producto => {
-            const row = table.insertRow();
-            const cell1 = row.insertCell(0);
-            const cell2 = row.insertCell(1);
-            const cell3 = row.insertCell(2);
+            const row = document.createElement('tr');
+            const cell1 = document.createElement('td');
+            const cell2 = document.createElement('td');
+            const cell3 = document.createElement('td');
             cell1.innerHTML = producto.nombre;
             cell2.innerHTML = producto.cantidad;
             cell3.innerHTML = `
-                <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', ${producto.cantidad})">Actualizar</button>
+                <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', ${producto.cantidad}, ${producto.tipo_id})">Actualizar</button>
                 <button onclick="deleteProduct(${producto.id})">Eliminar</button>
             `;
+            row.appendChild(cell1);
+            row.appendChild(cell2);
+            row.appendChild(cell3);
+
+            // Agregar el producto a la tabla correspondiente según su tipo
+            if (producto.tipo === 'Insumos') {
+                insumosTable.appendChild(row);
+            } else if (producto.tipo === 'Verduras/Frutas') {
+                verdurasFrutasTable.appendChild(row);
+            } else if (producto.tipo === 'Higiene') {
+                higieneTable.appendChild(row);
+            }
         });
     });
 }
-
 function showAddProductForm() {
     document.getElementById('add-product-form').style.display = 'block';
 }
@@ -169,13 +228,14 @@ function showAddProductForm() {
 function addProduct() {
     const nombre = document.getElementById('new-product-name').value;
     const cantidad = document.getElementById('new-product-quantity').value;
+    const tipo_id = document.getElementById('new-product-type').value;
 
     fetch('http://localhost:1434/addProduct', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ nombre, cantidad: parseInt(cantidad) })
+        body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipo_id) })
     })
     .then(response => response.json())
     .then(data => {
@@ -185,22 +245,23 @@ function addProduct() {
     });
 }
 
-function showUpdateProductForm(id, nombre, cantidad) {
+function showUpdateProductForm(id, nombre, cantidad, tipo_id) {
     const newNombre = prompt('Nuevo nombre:', nombre);
     const newCantidad = prompt('Nueva cantidad:', cantidad);
+    const newTipo = prompt('Nuevo tipo:', tipo_id);
 
-    if (newNombre !== null && newCantidad !== null) {
-        updateProduct(id, newNombre, newCantidad);
+    if (newNombre !== null && newCantidad !== null && newTipo !== null) {
+        updateProduct(id, newNombre, newCantidad, newTipo);
     }
 }
 
-function updateProduct(id, nombre, cantidad) {
-    fetch(`http://localhost:1434/updateProduct`, {
-        method: 'POST',
+function updateProduct(id, nombre, cantidad, tipo_id) {
+    fetch(`http://localhost:1434/updateProduct/${id}`, {
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ id, nombre, cantidad: parseInt(cantidad) })
+        body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipo_id) })
     })
     .then(response => response.json())
     .then(data => {

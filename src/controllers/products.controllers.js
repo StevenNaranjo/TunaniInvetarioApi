@@ -8,8 +8,10 @@ const router = express.Router();
 //logica para obtener el inventario
 export const getInventario = async (req, res) => {
     try {
-        const allProducts = await pool.query('SELECT * FROM productos');
-        res.json(allProducts.rows);
+        const products = await pool.query(
+            'SELECT p.*, t.tipo FROM productos p JOIN tipos_productos t ON p.tipo_id = t.id'
+        );
+        res.json(products.rows);
     } catch (err) {
         console.error(err.message);
     }
@@ -56,8 +58,11 @@ export const register = async (req, res) => {
 
 export const addProduct = async (req, res) => {
     try {
-        const { nombre, cantidad } = req.body;
-        const newProduct = await pool.query('INSERT INTO productos (nombre, cantidad) VALUES ($1, $2) RETURNING *', [nombre, cantidad]);
+        const { nombre, cantidad, tipo_id } = req.body;
+        const newProduct = await pool.query(
+            'INSERT INTO productos (nombre, cantidad, tipo_id) VALUES ($1, $2, $3) RETURNING *',
+            [nombre, cantidad, tipo_id]
+        );
         res.json(newProduct.rows[0]);
     } catch (err) {
         console.error(err.message);
@@ -76,8 +81,12 @@ export const deleteProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
     try {
-        const { id, nombre, cantidad } = req.body;
-        await pool.query('UPDATE productos SET nombre = $1, cantidad = $2 WHERE id = $3', [nombre, cantidad, id]);
+        const { id } = req.params;
+        const { nombre, cantidad, tipo_id } = req.body;
+        await pool.query(
+            'UPDATE productos SET nombre = $1, cantidad = $2, tipo_id = $3 WHERE id = $4',
+            [nombre, cantidad, tipo_id, id]
+        );
         res.json('Producto actualizado');
     } catch (err) {
         console.error(err.message);

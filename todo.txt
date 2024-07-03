@@ -1,0 +1,5 @@
+Organizar los productos por tipo
+    Higiene
+    Insumos
+    Verdura
+        (Crear tabla)
