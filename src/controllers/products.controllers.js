@@ -92,3 +92,13 @@ export const updateProduct = async (req, res) => {
         console.error(err.message);
     }
 };
+
+export const getProductTypes = async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM tipos_productos');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener los tipos de productos' });
+    }
+}

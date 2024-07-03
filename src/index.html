@@ -36,7 +36,7 @@
         #inventory-section {
             display: none;
         }
-        input[type="text"], input[type="password"] {
+        input[type="text"], input[type="password"], input[type="number"], select {
             width: 100%;
             padding: 10px;
             margin: 10px 0;
@@ -65,6 +65,38 @@
         th {
             background-color: #f2f2f2;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -89,56 +121,11 @@
         <!-- Sección de inventario -->
         <div id="inventory-section">
             <h2>Inventario</h2>
-            <div id="insumos-section">
-                <h3>Insumos</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nombre del Producto</th>
-                            <th>Cantidad</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="insumos-table">
-                        <!-- Aquí se insertarán las filas de insumos desde el backend -->
-                    </tbody>
-                </table>
+            <div id="inventory-content">
+                <!-- Aquí se insertarán las tablas de productos por tipo -->
             </div>
-        
-            <div id="verduras-frutas-section">
-                <h3>Verduras/Frutas</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nombre del Producto</th>
-                            <th>Cantidad</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="verduras-frutas-table">
-                        <!-- Aquí se insertarán las filas de verduras/frutas desde el backend -->
-                    </tbody>
-                </table>
-            </div>
-        
-            <div id="higiene-section">
-                <h3>Higiene</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Nombre del Producto</th>
-                            <th>Cantidad</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="higiene-table">
-                        <!-- Aquí se insertarán las filas de higiene desde el backend -->
-                    </tbody>
-                </table>
-            </div>
-        
             <button onclick="showAddProductForm()">Añadir Producto</button>
-        
+
             <!-- Formulario para añadir producto -->
             <div id="add-product-form" style="display:none;">
                 <h3>Añadir Producto</h3>
@@ -148,141 +135,205 @@
                 <input type="number" id="new-product-quantity" required>
                 <label for="new-product-type">Tipo:</label>
                 <select id="new-product-type" required>
-                    <option value="1">Insumos</option>
-                    <option value="2">Verduras/Frutas</option>
-                    <option value="3">Higiene</option>
+                    <!-- Los tipos de productos se insertarán desde el backend -->
                 </select>
                 <button onclick="addProduct()">Guardar</button>
             </div>
         </div>
     </div>
 
+    <!-- Modal para actualizar producto -->
+    <div id="update-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeUpdateModal()">&times;</span>
+            <h2>Actualizar Producto</h2>
+            <input type="hidden" id="update-product-id">
+            <label for="update-product-name">Nombre:</label>
+            <input type="text" id="update-product-name" required>
+            <label for="update-product-quantity">Cantidad:</label>
+            <input type="number" id="update-product-quantity" required>
+            <label for="update-product-type">Tipo:</label>
+            <select id="update-product-type" required>
+                <!-- Los tipos de productos se insertarán desde el backend -->
+            </select>
+            <button onclick="updateProduct()">Guardar</button>
+        </div>
+    </div>
+
     <script>
-    document.getElementById('login').addEventListener('submit', function (event) {
-    event.preventDefault();
+        document.getElementById('login').addEventListener('submit', function (event) {
+            event.preventDefault();
 
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
 
-    fetch('http://localhost:1434/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ usuario: username, contraseña: password })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data === 'Usuario o contraseña incorrectos') {
-            alert(data);
-        } else {
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('inventory-section').style.display = 'block';
-            loadInventory();
+            fetch('http://localhost:1434/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ usuario: username, contraseña: password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data === 'Usuario o contraseña incorrectos') {
+                    alert(data);
+                } else {
+                    document.getElementById('login-form').style.display = 'none';
+                    document.getElementById('inventory-section').style.display = 'block';
+                    loadInventory();
+                    loadProductTypes();
+                }
+            });
+        });
+
+        function loadInventory() {
+            fetch('http://localhost:1434/inventario')
+            .then(response => response.json())
+            .then(data => {
+                const content = document.getElementById('inventory-content');
+                content.innerHTML = ''; // Limpiar contenido
+
+                // Agrupar productos por tipo
+                const groupedProducts = data.reduce((acc, producto) => {
+                    if (!acc[producto.tipo]) {
+                        acc[producto.tipo] = [];
+                    }
+                    acc[producto.tipo].push(producto);
+                    return acc;
+                }, {});
+
+                // Crear tablas para cada tipo de producto
+                for (const [tipo, productos] of Object.entries(groupedProducts)) {
+                    const table = document.createElement('table');
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Nombre del Producto</th>
+                                <th>Cantidad</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productos.map(producto => `
+                                <tr>
+                                    <td>${producto.nombre}</td>
+                                    <td>${producto.cantidad}</td>
+                                    <td>
+                                        <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', ${producto.cantidad}, ${producto.tipo_id})">Actualizar</button>
+                                        <button onclick="deleteProduct(${producto.id})">Eliminar</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    `;
+                    content.appendChild(document.createElement('h3')).innerText = tipo;
+                    content.appendChild(table);
+                }
+            });
         }
+
+        function loadProductTypes() {
+            fetch('http://localhost:1434/tiposProductos')
+            .then(response => response.json())
+            .then(data => {
+                const addSelect = document.getElementById('new-product-type');
+                const updateSelect = document.getElementById('update-product-type');
+                addSelect.innerHTML = '';
+                updateSelect.innerHTML = '';
+
+                data.forEach(tipo => {
+                    const option = document.createElement('option');
+                    option.value = tipo.id;
+                    option.innerText = tipo.tipo;
+                    addSelect.appendChild(option);
+
+                    const updateOption = option.cloneNode(true);
+                    updateSelect.appendChild(updateOption);
+                });
+            });
+        }
+
+        function showAddProductForm() {
+            document.getElementById('add-product-form').style.display = 'block';
+        }
+
+        function addProduct() {
+            const nombre = document.getElementById('new-product-name').value;
+            const cantidad = document.getElementById('new-product-quantity').value;
+            const tipoId = document.getElementById('new-product-type').value;
+
+            fetch('http://localhost:1434/addProduct', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipoId) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Producto añadido');
+                loadInventory();
+                document.getElementById('add-product-form').style.display = 'none';
+            });
+        }
+
+        function showUpdateProductForm(id, nombre, cantidad, tipoId) {
+            const modal = document.getElementById('update-modal');
+            modal.style.display = 'block';
+
+            document.getElementById('update-product-name').value = nombre;
+            document.getElementById('update-product-quantity').value = cantidad;
+            document.getElementById('update-product-type').value = tipoId;
+
+            document.getElementById('update-product-id').value = id;
+        }
+
+        function closeUpdateModal() {
+            const modal = document.getElementById('update-modal');
+            modal.style.display = 'none';
+        }
+
+        function updateProduct() {
+            const id = document.getElementById('update-product-id').value;
+            const nombre = document.getElementById('update-product-name').value;
+            const cantidad = document.getElementById('update-product-quantity').value;
+            const tipoId = document.getElementById('update-product-type').value;
+
+            fetch(`http://localhost:1434/updateProduct/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipoId) })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Producto actualizado');
+                loadInventory();
+        closeUpdateModal();
     });
-});
-
-function loadInventory() {
-    fetch('http://localhost:1434/inventario')
-    .then(response => response.json())
-    .then(data => {
-        const insumosTable = document.getElementById('insumos-table');
-        const verdurasFrutasTable = document.getElementById('verduras-frutas-table');
-        const higieneTable = document.getElementById('higiene-table');
-
-        insumosTable.innerHTML = ''; // Limpia la tabla
-        verdurasFrutasTable.innerHTML = ''; // Limpia la tabla
-        higieneTable.innerHTML = ''; // Limpia la tabla
-
-        data.forEach(producto => {
-            const row = document.createElement('tr');
-            const cell1 = document.createElement('td');
-            const cell2 = document.createElement('td');
-            const cell3 = document.createElement('td');
-            cell1.innerHTML = producto.nombre;
-            cell2.innerHTML = producto.cantidad;
-            cell3.innerHTML = `
-                <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', ${producto.cantidad}, ${producto.tipo_id})">Actualizar</button>
-                <button onclick="deleteProduct(${producto.id})">Eliminar</button>
-            `;
-            row.appendChild(cell1);
-            row.appendChild(cell2);
-            row.appendChild(cell3);
-
-            // Agregar el producto a la tabla correspondiente según su tipo
-            if (producto.tipo === 'Insumos') {
-                insumosTable.appendChild(row);
-            } else if (producto.tipo === 'Verduras/Frutas') {
-                verdurasFrutasTable.appendChild(row);
-            } else if (producto.tipo === 'Higiene') {
-                higieneTable.appendChild(row);
+}
+        function deleteProduct(id) {
+            if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+                fetch(`http://localhost:1434/deleteProduct/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Producto eliminado');
+                    loadInventory();
+                });
             }
-        });
-    });
-}
-function showAddProductForm() {
-    document.getElementById('add-product-form').style.display = 'block';
-}
+        }
 
-function addProduct() {
-    const nombre = document.getElementById('new-product-name').value;
-    const cantidad = document.getElementById('new-product-quantity').value;
-    const tipo_id = document.getElementById('new-product-type').value;
-
-    fetch('http://localhost:1434/addProduct', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipo_id) })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert('Producto añadido');
-        loadInventory();
-        document.getElementById('add-product-form').style.display = 'none';
-    });
-}
-
-function showUpdateProductForm(id, nombre, cantidad, tipo_id) {
-    const newNombre = prompt('Nuevo nombre:', nombre);
-    const newCantidad = prompt('Nueva cantidad:', cantidad);
-    const newTipo = prompt('Nuevo tipo:', tipo_id);
-
-    if (newNombre !== null && newCantidad !== null && newTipo !== null) {
-        updateProduct(id, newNombre, newCantidad, newTipo);
-    }
-}
-
-function updateProduct(id, nombre, cantidad, tipo_id) {
-    fetch(`http://localhost:1434/updateProduct/${id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipo_id) })
-    })
-    .then(response => response.json())
-    .then(data => {
-        alert('Producto actualizado');
-        loadInventory();
-    });
-}
-
-function deleteProduct(id) {
-    if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
-        fetch(`http://localhost:1434/deleteProduct/${id}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert('Producto eliminado');
-            loadInventory();
-        });
-    }
-}
-
+        // Cerrar el modal cuando el usuario hace clic fuera del contenido del modal
+        window.onclick = function(event) {
+            const modal = document.getElementById('update-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
