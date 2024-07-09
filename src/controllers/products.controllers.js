@@ -9,18 +9,17 @@ const router = express.Router();
 export const getInventario = async (req, res) => {
     try {
         const products = await pool.query(
-            'SELECT p.*, t.tipo FROM productos p JOIN tipos_productos t ON p.tipo_id = t.id'
+            `SELECT p.*, u.unidad, t.tipo 
+            FROM productos p 
+            JOIN "UnidadesMedida" u ON p."unidadMedida" = u.id
+            JOIN tipos_productos t ON p.tipo_id = t.id`
         );
         res.json(products.rows);
     } catch (err) {
         console.error(err.message);
     }
 };
-// Tabla usuarios
-// id integer
-// usuario text
-// contraseña text
-//logica para iniciar sesion
+
 
 export const login = async (req, res) => {
     try {
@@ -58,16 +57,17 @@ export const register = async (req, res) => {
 
 export const addProduct = async (req, res) => {
     try {
-        const { nombre, cantidad, tipo_id } = req.body;
+        const { nombre, cantidad, unidad_id, tipo_id } = req.body;
         const newProduct = await pool.query(
-            'INSERT INTO productos (nombre, cantidad, tipo_id) VALUES ($1, $2, $3) RETURNING *',
-            [nombre, cantidad, tipo_id]
+            'INSERT INTO productos (nombre, cantidad, "unidadMedida", tipo_id) VALUES ($1, $2, $3, $4) RETURNING *',
+            [nombre, cantidad, unidad_id, tipo_id]
         );
         res.json(newProduct.rows[0]);
     } catch (err) {
         console.error(err.message);
     }
 };
+
 
 export const deleteProduct = async (req, res) => {
     try {
@@ -82,16 +82,17 @@ export const deleteProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre, cantidad, tipo_id } = req.body;
+        const { nombre, cantidad, unidad_id, tipo_id } = req.body;
         await pool.query(
-            'UPDATE productos SET nombre = $1, cantidad = $2, tipo_id = $3 WHERE id = $4',
-            [nombre, cantidad, tipo_id, id]
+            'UPDATE productos SET nombre = $1, cantidad = $2, "unidadMedida" = $3, tipo_id = $4 WHERE id = $5',
+            [nombre, cantidad, unidad_id, tipo_id, id]
         );
         res.json('Producto actualizado');
     } catch (err) {
         console.error(err.message);
     }
 };
+
 
 export const getProductTypes = async (req, res) => {
     try {
@@ -102,3 +103,29 @@ export const getProductTypes = async (req, res) => {
         res.status(500).json({ error: 'Error al obtener los tipos de productos' });
     }
 }
+
+export const getUnidadesMedida = async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM "UnidadesMedida"');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener las unidades de medida' });
+    }
+}
+
+export const searchProducts = async (req, res) => {
+    try {
+        const { query } = req.query;
+        const products = await pool.query(
+            `SELECT p.*, u.unidad 
+            FROM productos p 
+            JOIN "UnidadesMedida" u ON p."unidadMedida" = u.id
+            WHERE p.nombre ILIKE $1`,
+            [`%${query}%`]
+        );
+        res.json(products.rows);
+    } catch (err) {
+        console.error(err.message);
+    }
+};

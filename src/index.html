@@ -97,6 +97,59 @@
             text-decoration: none;
             cursor: pointer;
         }
+        @media screen and (max-width: 600px) {
+    h2, h3 {
+        font-size: 1.5em;
+    }
+
+    #inventory-content table, 
+    #inventory-content th, 
+    #inventory-content td {
+        display: block;
+        width: 100%;
+    }
+
+    #inventory-content th, 
+    #inventory-content td {
+        box-sizing: border-box;
+        padding: 10px;
+        text-align: left;
+    }
+
+    #inventory-content th {
+        background-color: transparent;
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    #inventory-content td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+    }
+
+    #inventory-content td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 50%;
+        padding-left: 10px;
+        font-weight: bold;
+        text-align: left;
+    }
+
+    button {
+        width: 100%;
+        margin: 5px 0;
+    }
+
+    input, select {
+        width: 100%;
+        margin: 5px 0;
+    }
+}
     </style>
 </head>
 <body>
@@ -121,42 +174,47 @@
         <!-- Sección de inventario -->
         <div id="inventory-section">
             <h2>Inventario</h2>
+            <input type="text" id="search-query" placeholder="Buscar producto..." oninput="searchProducts()">
+            <button onclick="showAddProductForm()">Añadir Producto</button>
             <div id="inventory-content">
                 <!-- Aquí se insertarán las tablas de productos por tipo -->
             </div>
-            <button onclick="showAddProductForm()">Añadir Producto</button>
+            
 
             <!-- Formulario para añadir producto -->
-            <div id="add-product-form" style="display:none;">
-                <h3>Añadir Producto</h3>
-                <label for="new-product-name">Nombre:</label>
-                <input type="text" id="new-product-name" required>
-                <label for="new-product-quantity">Cantidad:</label>
-                <input type="number" id="new-product-quantity" required>
-                <label for="new-product-type">Tipo:</label>
-                <select id="new-product-type" required>
-                    <!-- Los tipos de productos se insertarán desde el backend -->
-                </select>
-                <button onclick="addProduct()">Guardar</button>
+            <div id="add-product-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeAddProductForm()">&times;</span>
+                    <h2>Añadir Producto</h2>
+                    <label for="new-product-name">Nombre:</label>
+                    <input type="text" id="new-product-name"><br>
+                    <label for="new-product-quantity">Cantidad:</label>
+                    <input type="text" id="new-product-quantity"><br>
+                    <label for="new-product-unit">Unidad de Medida:</label>
+                    <select id="new-product-unit"></select><br>
+                    <label for="new-product-type">Tipo de Producto:</label>
+                    <select id="new-product-type"></select><br>
+                    <button onclick="addProduct()">Añadir</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Modal para actualizar producto -->
-    <div id="update-modal" class="modal">
+    <div id="update-product-modal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeUpdateModal()">&times;</span>
+            <span class="close" onclick="closeUpdateProductForm()">&times;</span>
             <h2>Actualizar Producto</h2>
             <input type="hidden" id="update-product-id">
             <label for="update-product-name">Nombre:</label>
-            <input type="text" id="update-product-name" required>
+            <input type="text" id="update-product-name"><br>
             <label for="update-product-quantity">Cantidad:</label>
-            <input type="number" id="update-product-quantity" required>
-            <label for="update-product-type">Tipo:</label>
-            <select id="update-product-type" required>
-                <!-- Los tipos de productos se insertarán desde el backend -->
-            </select>
-            <button onclick="updateProduct()">Guardar</button>
+            <input type="text" id="update-product-quantity"><br>
+            <label for="update-product-unit">Unidad de Medida:</label>
+            <select id="update-product-unit"></select><br>
+            <label for="update-product-type">Tipo de Producto:</label>
+            <select id="update-product-type"></select><br>
+            <button onclick="updateProduct()">Actualizar</button>
         </div>
     </div>
 
@@ -211,6 +269,7 @@
                             <tr>
                                 <th>Nombre del Producto</th>
                                 <th>Cantidad</th>
+                                <th>Unidad de Medida</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -219,8 +278,9 @@
                                 <tr>
                                     <td>${producto.nombre}</td>
                                     <td>${producto.cantidad}</td>
+                                    <td>${producto.unidad}</td>
                                     <td>
-                                        <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', ${producto.cantidad}, ${producto.tipo_id})">Actualizar</button>
+                                        <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', '${producto.cantidad}', ${producto.unidad_id}, ${producto.tipo_id})">Actualizar</button>
                                         <button onclick="deleteProduct(${producto.id})">Eliminar</button>
                                     </td>
                                 </tr>
@@ -231,7 +291,7 @@
                     content.appendChild(table);
                 }
             });
-        }
+}
 
         function loadProductTypes() {
             fetch('http://localhost:1434/tiposProductos')
@@ -254,13 +314,25 @@
             });
         }
 
+        // Mostrar formulario de añadir producto
         function showAddProductForm() {
-            document.getElementById('add-product-form').style.display = 'block';
+            const modal = document.getElementById('add-product-modal');
+            modal.style.display = 'block';
+            loadUnits('new-product-unit');
+            loadProductTypes('new-product-type');
         }
+
+        // Cerrar formulario de añadir producto
+        function closeAddProductForm() {
+            const modal = document.getElementById('add-product-modal');
+            modal.style.display = 'none';
+        }
+
 
         function addProduct() {
             const nombre = document.getElementById('new-product-name').value;
             const cantidad = document.getElementById('new-product-quantity').value;
+            const unidadId = document.getElementById('new-product-unit').value;
             const tipoId = document.getElementById('new-product-type').value;
 
             fetch('http://localhost:1434/addProduct', {
@@ -268,7 +340,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipoId) })
+                body: JSON.stringify({ nombre, cantidad, unidad_id: unidadId, tipo_id: tipoId })
             })
             .then(response => response.json())
             .then(data => {
@@ -278,19 +350,29 @@
             });
         }
 
-        function showUpdateProductForm(id, nombre, cantidad, tipoId) {
-            const modal = document.getElementById('update-modal');
+
+
+        // Mostrar formulario de actualizar producto
+        function showUpdateProductForm(id, nombre, cantidad, unidadId, tipoId) {
+            const modal = document.getElementById('update-product-modal');
             modal.style.display = 'block';
 
+            document.getElementById('update-product-id').value = id;
             document.getElementById('update-product-name').value = nombre;
             document.getElementById('update-product-quantity').value = cantidad;
-            document.getElementById('update-product-type').value = tipoId;
 
-            document.getElementById('update-product-id').value = id;
+            loadUnits('update-product-unit');
+            loadProductTypes('update-product-type');
+
+            setTimeout(() => {
+                document.getElementById('update-product-unit').value = unidadId;
+                document.getElementById('update-product-type').value = tipoId;
+            }, 100); // Esperar un momento para asegurarse de que las opciones se carguen
         }
 
-        function closeUpdateModal() {
-            const modal = document.getElementById('update-modal');
+        // Cerrar formulario de actualizar producto
+        function closeUpdateProductForm() {
+            const modal = document.getElementById('update-product-modal');
             modal.style.display = 'none';
         }
 
@@ -298,6 +380,7 @@
             const id = document.getElementById('update-product-id').value;
             const nombre = document.getElementById('update-product-name').value;
             const cantidad = document.getElementById('update-product-quantity').value;
+            const unidadId = document.getElementById('update-product-unit').value;
             const tipoId = document.getElementById('update-product-type').value;
 
             fetch(`http://localhost:1434/updateProduct/${id}`, {
@@ -305,15 +388,87 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ nombre, cantidad: parseInt(cantidad), tipo_id: parseInt(tipoId) })
+                body: JSON.stringify({ nombre, cantidad, unidad_id: unidadId, tipo_id: tipoId })
             })
             .then(response => response.json())
             .then(data => {
                 alert('Producto actualizado');
                 loadInventory();
-        closeUpdateModal();
-    });
-}
+                closeUpdateProductForm();
+            });
+        }
+
+        function loadUnits() {
+            fetch('http://localhost:1434/unidadesMedida')
+            .then(response => response.json())
+            .then(data => {
+                const addSelect = document.getElementById('new-product-unit');
+                const updateSelect = document.getElementById('update-product-unit');
+                addSelect.innerHTML = '';
+                updateSelect.innerHTML = '';
+
+                data.forEach(unidad => {
+                    const option = document.createElement('option');
+                    option.value = unidad.id;
+                    option.innerText = unidad.unidad;
+                    addSelect.appendChild(option);
+
+                    const updateOption = option.cloneNode(true);
+                    updateSelect.appendChild(updateOption);
+                });
+            });
+        }
+
+        function searchProducts() {
+            const query = document.getElementById('search-query').value;
+
+            fetch(`http://localhost:1434/searchProducts?query=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                const content = document.getElementById('inventory-content');
+                content.innerHTML = ''; // Limpiar contenido
+
+                // Agrupar productos por unidad
+                const groupedProducts = data.reduce((acc, producto) => {
+                    if (!acc[producto.unidad]) {
+                        acc[producto.unidad] = [];
+                    }
+                    acc[producto.unidad].push(producto);
+                    return acc;
+                }, {});
+
+                // Crear tablas para cada tipo de producto
+                for (const [unidad, productos] of Object.entries(groupedProducts)) {
+                    const table = document.createElement('table');
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Nombre del Producto</th>
+                                <th>Cantidad</th>
+                                <th>Unidad de Medida</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productos.map(producto => `
+                                <tr>
+                                    <td>${producto.nombre}</td>
+                                    <td>${producto.cantidad}</td>
+                                    <td>${producto.unidad}</td>
+                                    <td>
+                                        <button onclick="showUpdateProductForm(${producto.id}, '${producto.nombre}', '${producto.cantidad}', ${producto.unidad_id})">Actualizar</button>
+                                        <button onclick="deleteProduct(${producto.id})">Eliminar</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    `;
+                    content.appendChild(document.createElement('h3')).innerText = unidad;
+                    content.appendChild(table);
+                }
+            });
+        }
+
         function deleteProduct(id) {
             if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
                 fetch(`http://localhost:1434/deleteProduct/${id}`, {
@@ -326,12 +481,20 @@
                 });
             }
         }
+        // Cerrar modal de actualizar producto
+        function closeUpdateModal() {
+            document.getElementById('update-modal').style.display = 'none';
+        }
 
-        // Cerrar el modal cuando el usuario hace clic fuera del contenido del modal
+        // Cerrar modal cuando se hace clic fuera del contenido del modal
         window.onclick = function(event) {
-            const modal = document.getElementById('update-modal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
+            const addModal = document.getElementById('add-product-modal');
+            const updateModal = document.getElementById('update-product-modal');
+            if (event.target == addModal) {
+                addModal.style.display = 'none';
+            }
+            if (event.target == updateModal) {
+                updateModal.style.display = 'none';
             }
         }
     </script>
